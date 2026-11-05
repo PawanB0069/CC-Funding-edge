@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fundingedge
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CACHE_MS
+        value: "10000"
