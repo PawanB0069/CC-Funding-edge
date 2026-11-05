@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FundingEdge — Crypto Funding Intelligence</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#121a2b;--line:#26334a;--muted:#93a4bd;--text:#edf3ff;--green:#37d6a0;--red:#ff7185}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#172544 0,transparent 35%),var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,Segoe UI,Arial,sans-serif}
+header{padding:24px max(20px,calc((100% - 1180px)/2));border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;align-items:center}.brand{font-size:25px;font-weight:800}.brand span{color:var(--green)}.sub,.label{color:var(--muted);font-size:12px}
+main{max-width:1180px;margin:28px auto;padding:0 20px}.top{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:20px}h1{font-size:25px;margin:0 0 4px}
+button,input{font:inherit}button{border:1px solid #355078;background:#1a2b49;color:var(--text);border-radius:9px;padding:10px 15px;cursor:pointer}button:hover{background:#233b61}button:disabled{opacity:.5}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.card,.section{background:linear-gradient(145deg,#151f33,#101827);border:1px solid var(--line);border-radius:14px;padding:17px}.value{font-size:24px;font-weight:750;margin-top:6px}
+.section{margin:16px 0;padding:0;overflow:hidden}.section-head{padding:17px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.section h2{font-size:17px;margin:0}input{background:#0c1423;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-width:220px}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{text-align:right;padding:12px 16px;border-bottom:1px solid #202c40;font-variant-numeric:tabular-nums}th{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase}th:first-child,td:first-child{text-align:left}tbody tr:hover{background:#19243a}.asset{font-weight:700}.exchange{color:var(--muted);font-size:12px}.pos{color:var(--green)}.neg{color:var(--red)}.empty{padding:25px;color:var(--muted);text-align:center}.notice{color:var(--muted);font-size:12px;padding:14px 18px;border-top:1px solid var(--line)}
+footer{max-width:1180px;margin:25px auto 40px;padding:0 20px;color:var(--muted);font-size:12px}@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}header{padding:20px}}@media(max-width:460px){.cards{gap:8px}.card{padding:12px}.value{font-size:19px}}
+</style></head>
+<body>
+<header><div><div class="brand">Funding<span>Edge</span></div><div class="sub">Crypto funding intelligence</div></div><div class="sub">PUBLIC MARKET DATA · NO EXCHANGE LOGIN REQUIRED</div></header>
+<main>
+<div class="top"><div><h1>Funding rate dashboard</h1><div class="sub" id="status">Connecting to market data…</div></div><button id="refresh">↻ Refresh data</button></div>
+<div class="cards">
+<div class="card"><div class="label">Markets loaded</div><div class="value" id="markets">—</div></div>
+<div class="card"><div class="label">Exchanges online</div><div class="value" id="exchanges">—</div></div>
+<div class="card"><div class="label">Spread opportunities</div><div class="value" id="opps">—</div></div>
+<div class="card"><div class="label">Last updated</div><div class="value" id="updated" style="font-size:17px">—</div></div></div>
+<section class="section"><div class="section-head"><h2>Cross-exchange funding spreads</h2><span class="sub">Indicative estimates · not executable arbitrage</span></div>
+<div class="table-wrap"><table><thead><tr><th>Asset</th><th>Short exchange*</th><th>Long exchange*</th><th>Estimated daily spread</th><th>Estimated annualized</th></tr></thead><tbody id="opportunityRows"><tr><td colspan="5" class="empty">Loading opportunities…</td></tr></tbody></table></div>
+<div class="notice">*Exchange labels reflect higher- and lower-funding venues in this snapshot. Not a trade instruction.</div></section>
+<section class="section"><div class="section-head"><h2>Live funding rates</h2><input id="search" type="search" placeholder="Search BTC, ETH, SOL…"></div>
+<div class="table-wrap"><table><thead><tr><th>Asset / exchange</th><th>Funding rate</th><th>Interval</th><th>Hourly</th><th>Daily</th><th>Annualized</th><th>24h volume</th></tr></thead><tbody id="marketRows"><tr><td colspan="7" class="empty">Loading market data…</td></tr></tbody></table></div>
+<div class="notice">Rates are normalized estimates. Actual settlements, fees, slippage, liquidity, basis, margin and liquidation risks vary by exchange and contract.</div></section>
+</main>
+<footer>FundingEdge is an informational analytics tool only. It does not execute trades or provide financial advice. Public exchange data may be delayed or unavailable.</footer>
+<script>
+let marketRows=[];
+const pct=n=>Number.isFinite(Number(n))?(Number(n)*100).toFixed(4)+'%':'—';
+const money=n=>{n=Number(n)||0;return n>=1e9?'$'+(n/1e9).toFixed(2)+'B':n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(1)+'K':'$'+n.toFixed(0)};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function renderMarkets(){const q=document.getElementById('search').value.trim().toUpperCase();const rows=marketRows.filter(r=>!q||r.asset.includes(q)||r.exchange.toUpperCase().includes(q));document.getElementById('marketRows').innerHTML=rows.slice(0,250).map(r=>`<tr><td><b>${esc(r.asset)}</b><br><span class="exchange">${esc(r.exchange)} · ${esc(r.symbol)}</span></td><td class="${r.fundingRate>=0?'pos':'neg'}">${pct(r.fundingRate)}</td><td>${Number(r.intervalHours)||'—'}h</td><td>${pct(r.hourlyRate)}</td><td>${pct(r.dailyRate)}</td><td>${pct(r.annualizedRate)}</td><td>${money(r.volume24h)}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No matching markets found.</td></tr>'}
+function renderOpps(items){document.getElementById('opportunityRows').innerHTML=(items||[]).slice(0,50).map(o=>`<tr><td><b>${esc(o.asset)}</b></td><td>${esc(o.shortExchange)}</td><td>${esc(o.longExchange)}</td><td class="pos">${pct(o.spreadDailyRate)}</td><td>${pct(o.estimatedAnnualPct/100)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No cross-exchange spreads available right now.</td></tr>'}
+async function load(force=false){const status=document.getElementById('status'),btn=document.getElementById('refresh');status.textContent='Fetching public exchange data…';btn.disabled=true;try{const res=await fetch('/api/market'+(force?'?refresh=1':''),{cache:'no-store'});const data=await res.json();if(!res.ok)throw Error(data.error||'Market data request failed');marketRows=data.rows||[];renderMarkets();renderOpps(data.opportunities||[]);document.getElementById('markets').textContent=marketRows.length;document.getElementById('exchanges').textContent=Object.values(data.exchanges||{}).filter(x=>x.status==='live').length+'/2';document.getElementById('opps').textContent=(data.opportunities||[]).length;document.getElementById('updated').textContent=new Date(data.updatedAt).toLocaleTimeString();const failed=Object.entries(data.exchanges||{}).filter(([,v])=>v.status!=='live').map(([k])=>k);status.textContent='Market data loaded · '+(failed.length?'Unavailable: '+failed.join(', '):'Binance and Bybit online')+' · Auto-refresh every 30 seconds'}catch(e){status.textContent='Could not load market data: '+e.message;document.getElementById('marketRows').innerHTML='<tr><td colspan="7" class="empty">Market data temporarily unavailable. Please refresh shortly.</td></tr>'}finally{btn.disabled=false}}
+document.getElementById('refresh').addEventListener('click',()=>load(true));document.getElementById('search').addEventListener('input',renderMarkets);load();setInterval(()=>load(false),30000);
+</script></body></html>
